@@ -1,30 +1,36 @@
 import { useEffect, useState } from 'react';
 import { gps } from 'exifr';
+import { AdvancedMarker, APIProvider, Map, MapCameraChangedEvent, Pin } from '@vis.gl/react-google-maps';
 import './App.css'
 
 const _URLS:string[] = ["0.jpg", "1.jpg", "2.jpg"]; 
 
 interface GPSInfo {
   image: string;
-  gps: {latitude:number,longitude:number};
+  gps: {lat:number,long:number};
 }
+
+//map api key: AIzaSyA0XFbVGVO7sd0FGQFDmtzO7ZgFrenMWbA
 
 function App() {
   const [imageUrl,setImageUrl] = useState(_URLS[0]);
   const [imageData, setImageData] = useState<GPSInfo[]>();//for active image
-  //parse the list
 
   useEffect(() => {
     let coords:GPSInfo[] = [];
-    async function getGPS(path:string){
-      const data = await gps(path);
-      //catch error
-      coords.push({image:path, gps:data});
+    async function processFiles() {
+      await Promise.all(_URLS.map(async item => {
+        let data = await gps(item);
+        coords.push({image:item, gps:{lat:data.latitude,long:data.longitude}});
+      }));
+
+      setImageData(coords);
+      console.log('done: '+coords[0].gps);
+      if(imageData!==undefined){
+        console.log('done: '+imageData[0].gps);
+      }
     }
-    _URLS.forEach((path) => {
-      getGPS(path);
-    });
-    setImageData(coords);
+    processFiles();
   },[]);
 
   return (
@@ -33,17 +39,26 @@ function App() {
         <div className="image">
           <img id="photo" src={imageUrl} alt='image' />
         </div>
-        <div className="card">
-          {_URLS.map((item, i) => {
-            return <button key={i} onClick={()=>setImageUrl(item)}>Image {i}</button>
-          })
-          }
-          <div>
-            {imageData && imageData.map((item) => 
-              <li>Coords: lat: {item.gps.latitude}, long: {item.gps.longitude}</li>
-            )}
+        {imageData !== undefined && (
+          <div className="card">          
+              {_URLS.map((item, i) => {
+                return <button key={i} onClick={()=>setImageUrl(item)}>Image {i}</button>
+              })}            
+              <div>
+                {imageData.map((item, i) => 
+                  <li key={i}>Coords: lat: {item.gps.lat}, long: {item.gps.long}</li>
+                )}
+              </div>
+              <APIProvider apiKey={'AIzaSyA0XFbVGVO7sd0FGQFDmtzO7ZgFrenMWbA'} onLoad={() => console.log('Maps API has loaded.')}>
+                  <Map 
+                      defaultZoom={13}
+                      defaultCenter={ { lat: imageData[0].gps.lat, lng: imageData[0].gps.long } }
+                      onCameraChanged={ (ev: MapCameraChangedEvent) => console.log('camera changed:', ev.detail.center, 'zoom:', ev.detail.zoom)
+                      }>
+                  </Map>    
+              </APIProvider>
           </div>
-        </div>
+        )}
       </div>
     </>
   )
