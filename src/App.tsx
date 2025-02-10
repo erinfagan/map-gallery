@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react';
-import { gps } from 'exifr';
+import { parse } from 'exifr';
 import { AdvancedMarker, APIProvider, Map, MapCameraChangedEvent, Pin } from '@vis.gl/react-google-maps';
 import './App.css'
 
 const _URLS:string[] = ["0.jpg", "1.jpg", "2.jpg"]; 
 
-interface GPSInfo {
-  image: string;
-  gps: {lat:number,long:number};
-}
-
-//map api key: AIzaSyA0XFbVGVO7sd0FGQFDmtzO7ZgFrenMWbA
+type GPSInfo = { image: string, location: google.maps.LatLngLiteral, alt: number }
 
 function App() {
   const [imageUrl,setImageUrl] = useState(_URLS[0]);
@@ -20,14 +15,14 @@ function App() {
     let coords:GPSInfo[] = [];
     async function processFiles() {
       await Promise.all(_URLS.map(async item => {
-        let data = await gps(item);
-        coords.push({image:item, gps:{lat:data.latitude,long:data.longitude}});
+        let data = await parse(item, {gps:true, translateKeys: true, translateValues:true});
+        let pos:google.maps.LatLngLiteral = {lat:data.latitude,lng:data.longitude};
+        coords.push({image:item, location:pos, alt: data.GPSAltitude});
       }));
 
       setImageData(coords);
-      console.log('done: '+coords[0].gps);
       if(imageData!==undefined){
-        console.log('done: '+imageData[0].gps);
+        console.log('done: '+imageData[0].location);
       }
     }
     processFiles();
@@ -40,26 +35,32 @@ function App() {
           <img id="photo" src={imageUrl} alt='image' />
         </div>
         {imageData !== undefined && (
-          <div className="card">          
-              {_URLS.map((item, i) => {
-                return <button key={i} onClick={()=>setImageUrl(item)}>Image {i}</button>
-              })}            
-              <div>
-                {imageData.map((item, i) => 
-                  <li key={i}>Coords: lat: {item.gps.lat}, long: {item.gps.long}</li>
-                )}
-              </div>
+          <div className="card">                        
               <APIProvider apiKey={'AIzaSyA0XFbVGVO7sd0FGQFDmtzO7ZgFrenMWbA'} onLoad={() => console.log('Maps API has loaded.')}>
                   <Map 
-                      defaultZoom={13}
-                      defaultCenter={ { lat: imageData[0].gps.lat, lng: imageData[0].gps.long } }
-                      onCameraChanged={ (ev: MapCameraChangedEvent) => console.log('camera changed:', ev.detail.center, 'zoom:', ev.detail.zoom)
-                      }>
-                  </Map>    
+                      defaultZoom={10}
+                      defaultCenter={ imageData[0].location }                      
+                      onCameraChanged={ (ev: MapCameraChangedEvent) => console.log('camera changed:', ev.detail.center, 'zoom:', ev.detail.zoom)}
+                      mapId='85777689c84f7376'
+                      mapTypeId={'terrain'}>
+                      <PoiMarkers pois={imageData} handleClick={setImageUrl}/>
+                  </Map> 
               </APIProvider>
           </div>
         )}
       </div>
+    </>
+  )
+}
+
+const PoiMarkers = (props: {pois: GPSInfo[], handleClick: (which:string) => void }) => {
+  return (
+    <>
+    {props.pois.map((poi: GPSInfo) => (
+      <AdvancedMarker key={poi.image} position={poi.location} title={poi.image} onClick={()=>props.handleClick(poi.image)}>
+        <Pin background={'#FBBC04'} glyphColor={'#000'}borderColor={'#000'} />
+      </AdvancedMarker>
+    ))}
     </>
   )
 }
