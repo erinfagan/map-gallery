@@ -3,30 +3,42 @@
 }
 
 .container {
-  display: flex;
-  flex-direction: row;
-  max-height: 100vh;
+  display: grid;
+  grid-template-areas: 
+    "photo map" 
+    "photo map"
+    "photo chart";
+  grid-template-columns: repeat(2,minmax(0,50vw));
+  grid-template-rows: minmax(0,40vh) minmax(0,20vh) minmax(0,40vh);
+  max-height:100vh;
+
+  @media (orientation: portrait){
+    grid-template-areas:
+      "photo photo"
+      "map map"
+      "chart chart";
+    grid-template-rows: minmax(0,60vh) minmax(0,20vh) minmax(0,20vh);
+  }
 }
 
 .image {
-  flex: 1 1 0;
-}
+  grid-area: photo;
+  overflow:scroll;
 
-img {
-  width: 100%;
-  height: auto;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0;
+  img {
+    width: 100%;
+    height: auto;
+  }
 }
 
 .map {
-  flex: 2 1 0;
+  grid-area: map;
 }
 
 .chart {
-  flex: 1 1 0;
+  grid-area: chart;
+}
+
+.infoWindow {
+  color: black;
 }

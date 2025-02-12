@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,7 +12,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import { parse } from 'exifr';
 
-import { AdvancedMarker, APIProvider, Map, MapCameraChangedEvent, Pin } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, APIProvider, InfoWindow, Map, MapCameraChangedEvent, Pin, useAdvancedMarkerRef } from '@vis.gl/react-google-maps';
 import './App.css'
 
 ChartJS.register(
@@ -28,6 +28,18 @@ ChartJS.register(
 const _URLS:string[] = ["0.jpg", "1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpg", "10.jpg", "11.jpg", "12.jpg", "13.jpg", "14.jpg", "15.jpg"]; 
 
 type GPSInfo = { ind:number, label:string, image: string, location: google.maps.LatLngLiteral, alt: number, cd: number };
+
+/* 
+A-------
+-change selected marker color on map
+-change selected point on chart
+-display extra info
+  -total elevation gain-loss
+  -total distance travelled (GoogleAPI request)
+B--------
+-move photos to S3
+-store relevant EXIF data in AWS table
+*/
 
 function App() {
   const [activeImage,setActiveImage] = useState(_URLS[0]);
@@ -59,7 +71,7 @@ function App() {
           <img id="photo" src={activeImage} alt='image' />
         </div>
         {mapData !== undefined && (
-          <div className="card"> 
+          <>
             <div className="map">                       
               <APIProvider apiKey={'AIzaSyA0XFbVGVO7sd0FGQFDmtzO7ZgFrenMWbA'} onLoad={() => console.log('Maps API has loaded.')}>
                 <Map 
@@ -68,14 +80,16 @@ function App() {
                     onCameraChanged={ (ev: MapCameraChangedEvent) => console.log('camera changed:', ev.detail.center, 'zoom:', ev.detail.zoom)}
                     mapId='85777689c84f7376'
                     mapTypeId={'terrain'}>
-                    <PoiMarkers pois={mapData} handleClick={setActiveImage}/>
+                      {mapData.map((item: GPSInfo) => (
+                        <MarkerWithInfo item={item} handleClick={setActiveImage}/>
+                      ))}
                 </Map> 
               </APIProvider>   
             </div>
             <div className="chart">           
               <LineChart data={mapData} handleClick={setActiveImage} />              
             </div>
-          </div>
+          </>
         )}
       </div>
     </>
@@ -107,7 +121,7 @@ const LineChart = (props:{data: GPSInfo[], handleClick: (which:string) => void})
       },
       title: {
         display: true,
-        text: 'Elevation Change Per Photo'
+        text: 'Elevation Change Per Photo (meters)'
       },
     }
   };
@@ -131,14 +145,29 @@ const LineChart = (props:{data: GPSInfo[], handleClick: (which:string) => void})
 }
 
 //display info per click, date, altitude, distance/altitude gain-loss from previous
-const PoiMarkers = (props: {pois: GPSInfo[], handleClick: (which:string) => void }) => {
+const MarkerWithInfo = (props: {item: GPSInfo, handleClick: (which:string) => void }) => {
+  const [markerRef,marker] = useAdvancedMarkerRef();
+  const [infoVisible, setInfoVisible] = useState(false);
+
+  const handleMarkerClick = useCallback(() => {
+    props.handleClick(props.item.image);
+    setInfoVisible(!infoVisible);
+  },[]);
+
+  const handleInfoClose = useCallback(() => setInfoVisible(false),[]);
+
   return (
     <>
-    {props.pois.map((poi: GPSInfo) => (
-      <AdvancedMarker key={poi.image} position={poi.location} title={poi.image} onClick={()=>props.handleClick(poi.image)}>
-        <Pin background={'#d62111'} glyph={poi.ind.toString()} glyphColor={'#FFF'} borderColor={'#7c170d'} />
+      <AdvancedMarker key={props.item.image} ref={markerRef} position={props.item.location} title={props.item.image} onClick={()=>handleMarkerClick()}>
+        <Pin background={'#d62111'} glyph={props.item.ind.toString()} glyphColor={'#FFF'} borderColor={'#7c170d'} />
       </AdvancedMarker>
-    ))}
+      {infoVisible && (
+        <InfoWindow className={'infoWindow'} anchor={marker} onClose={handleInfoClose}>
+          <h2>Image {props.item.ind}</h2>
+          <li>Day: {props.item.label}</li>
+          <li>Elevation: {props.item.alt} meters</li>
+        </InfoWindow>
+      )}
     </>
   )
 }
