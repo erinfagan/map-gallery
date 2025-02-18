@@ -11,19 +11,40 @@
   grid-template-columns: repeat(2,minmax(0,50vw));
   grid-template-rows: minmax(0,40vh) minmax(0,20vh) minmax(0,40vh);
   max-height:100vh;
+  transition: 300ms;
 
-  @media (orientation: portrait){
+  @media screen and (orientation: portrait) {
     grid-template-areas:
-      "photo photo"
-      "map map"
-      "chart chart";
+    "photo photo"
+    "map map"
+    "chart chart";
     grid-template-rows: minmax(0,60vh) minmax(0,20vh) minmax(0,20vh);
+  }
+}
+
+.container:has(.image:hover) {
+  @media screen and (orientation: portrait) and (min-width: 726px){
+    grid-template-rows: minmax(0,75vh) minmax(0,15vh) minmax(0,10vh);
+  }
+}
+
+.container:has(.map:hover) {
+  grid-template-rows: minmax(0,50vh) minmax(0,40vh) minmax(0,10vh);
+
+  @media screen and (orientation: portrait) and (min-height: 850px) {
+    grid-template-rows: minmax(0,40vh) minmax(0,50vh) minmax(0,10vh);
+  }
+}
+
+.container:has(.chart:hover) {
+  @media screen and (orientation: portrait){
+    grid-template-rows: minmax(0,60vh) minmax(0,15vh) minmax(0,25vh);
   }
 }
 
 .image {
   grid-area: photo;
-  overflow:scroll;
+  overflow-y:scroll;
 
   img {
     width: 100%;
@@ -37,6 +58,11 @@
 
 .chart {
   grid-area: chart;
+  
+}
+
+.center > * {
+  justify-self: center;
 }
 
 .infoWindow {
