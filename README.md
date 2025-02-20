@@ -35,17 +35,22 @@ These were selected because they were the most up-to-date and had good documenta
 
 ## Possible Improvements
 
+### Performance
+
 - I'm using an `<img>` tag for the gallery area AND having exifr library load the exif data from the same file
   - ideally, the .JPEG would be loaded once and that data would be rendered to the page and the exif pulled from there
   - this should be possible with the exifr library and I should continue to tinker with it
 - The image file names are stored in a `const`
   - just pulling all files from the `public/images/` folder would more flexible and allow gallery functionality
+
+### Usability
 - Add gallery navigation arrows to click through images and trigger the `<InfoWindow>` in the map
+- Support portrait image orientation
 - Make the `<InfoWindow>` prettier, that's an ugly gap at the top
 - Indicate the active image inside the chart and make the data points clickable to change the active image
 
 ## Overkill Improvement
 
 - Set up an S3 bucket with a Lambda function that is triggered by object creation
-- function parses out the relevant exif properties and stores it as custom object metadata for the image
-- app now requests images from S3 bucket and uses the metadata instead of parsing the exif
+- function parses out the relevant exif properties and stores it in a DynamoDB table
+- app now requests images from S3 bucket and gets the exif properties using an API request
