@@ -1,50 +1,51 @@
-# React + TypeScript + Vite
+# Map Gallery
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Silly project to visualize location and altitude progress from my Tour Du Mont Blanc trip.
 
-Currently, two official plugins are available:
+[View Live Here](www.aodha.com)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Expanding the ESLint configuration
+High Level Requirements:
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- parse lat,long and altitude from the photo EXIF data
+- display locations on Google Map
+- humble-brag about the elevation changes in a line chart
 
-- Configure the top-level `parserOptions` property like this:
+UI/UX:
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+- maximize space for photo display, then map, then chart
+- click map markers to load photo for that location and keep that marker 'active'
+- display clear relationship between photo, map marker and point on chart
+- responsive layout that works on web and mobile devices
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Libraries Used
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+These were selected because they were the most up-to-date and had good documentation.
+
+- [Chart.js](https://github.com/chartjs/Chart.js) for the line graph
+  - modular
+- [Exifr](https://github.com/MikeKovarik/exifr) to parse JPEG EXIF data
+  - modular
+  - can specify parsing of minimal data (only need 4 properties extracted)
+  - in-browser file loading (other options only worked with Node)
+- [react-google-map](https://github.com/JustFly1984/react-google-maps-api)
+  - Google-recommended for using Maps in React
+
+
+## Possible Improvements
+
+- I'm using an `<img>` tag for the gallery area AND having exifr library load the exif data from the same file
+  - ideally, the .JPEG would be loaded once and that data would be rendered to the page and the exif pulled from there
+  - this should be possible with the exifr library and I should continue to tinker with it
+- The image file names are stored in a `const`
+  - just pulling all files from the `public/images/` folder would more flexible and allow gallery functionality
+- Add gallery navigation arrows to click through images and trigger the `<InfoWindow>` in the map
+- Make the `<InfoWindow>` prettier, that's an ugly gap at the top
+- Indicate the active image inside the chart and make the data points clickable to change the active image
+
+## Overkill Improvement
+
+- Set up an S3 bucket with a Lambda function that is triggered by object creation
+- function parses out the relevant exif properties and stores it as custom object metadata for the image
+- app now requests images from S3 bucket and uses the metadata instead of parsing the exif
