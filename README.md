@@ -2,7 +2,7 @@
 
 Silly project to visualize location and altitude progress from my Tour Du Mont Blanc trip.
 
-[View Live Here](www.aodha.com)
+[View Live Here](https://www.aodha.com)
 
 
 High Level Requirements:
