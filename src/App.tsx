@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { parse } from 'exifr';
-import { AdvancedMarker, AdvancedMarkerProps, APIProvider, InfoWindow, Map, MapCameraChangedEvent, Pin, useAdvancedMarkerRef } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, AdvancedMarkerProps, APIProvider, InfoWindow, Map, Pin, useAdvancedMarkerRef } from '@vis.gl/react-google-maps';
 import './App.css'
 
 ChartJS.register(
@@ -36,15 +36,15 @@ function App() {
   const [selectedMarker, setSelectedMarker] = useState<google.maps.marker.AdvancedMarkerElement|null>(null);
   const [infoVisible, setInfoVisible] = useState(false);
 
-  const handleMarkerClick = useCallback((id:number, marker?:google.maps.marker.AdvancedMarkerElement) => {
-    setActiveInd(id);
+  const handleMarkerClick = useCallback((ind:number, marker?:google.maps.marker.AdvancedMarkerElement) => {
+    setActiveInd(ind);
     if(marker) setSelectedMarker(marker);
-    if(id !== activeInd){
+    if(ind !== activeInd){
       setInfoVisible(true);
     }else{
       setInfoVisible(isVisible => !isVisible);
     }
-    setActiveImage(_URLS[id]);
+    setActiveImage(_URLS[ind]);
   },[activeInd]);
 
   const handleInfoClose = useCallback(() => {
@@ -55,7 +55,7 @@ function App() {
     let coords:GPSInfo[] = [];
     async function processFiles() {
       await Promise.all(_URLS.map(async (item, i) => {
-        let data = await parse(item, {pick:['CreateDate', 'GPSLatitude', 'GPSLongitude', 'GPSAltitude'], reviveValues: true, translateKeys: true});
+        let data = await parse(`/images/${item}`, {pick:['CreateDate', 'GPSLatitude', 'GPSLongitude', 'GPSAltitude'], reviveValues: true, translateKeys: true});
         let pos:google.maps.LatLngLiteral = {lat:data.latitude,lng:data.longitude};
         let picName = data.CreateDate instanceof Date ? data.CreateDate.toLocaleString('en-us', {weekday: 'short'}): item;
         coords.push({ind: i, label: picName, image:item, location:pos, alt: data.GPSAltitude, cd: data.CreateDate});
@@ -73,16 +73,15 @@ function App() {
     <>
       <div className="container">
         <div className="image">
-          <img id="photo" src={activeImage} alt='image' />
+          <img id="photo" src={`/images/${activeImage}`} alt='image' />
         </div>
         {mapData !== undefined && (
           <>
             <div className="map center">                       
-              <APIProvider apiKey={'AIzaSyA0XFbVGVO7sd0FGQFDmtzO7ZgFrenMWbA'} onLoad={() => console.log('Maps API has loaded.')}>
+              <APIProvider apiKey={import.meta.env.VITE_GMAPS_KEY} onLoad={() => console.log('Maps API has loaded.')}>
                 <Map                     
                     defaultZoom={10}
                     defaultCenter={ mapData[0].location }                      
-                    onCameraChanged={ (ev: MapCameraChangedEvent) => console.log('camera changed:', ev.detail.center, 'zoom:', ev.detail.zoom)}
                     mapId='85777689c84f7376'
                     mapTypeId={'terrain'}>
                       {mapData.map((item: GPSInfo, ind) => (
@@ -105,7 +104,7 @@ function App() {
               </APIProvider>   
             </div>
             <div className="chart center">           
-              <LineChart data={mapData} handleClick={setActiveImage} activeIndex={activeInd} />              
+              <LineChart data={mapData} activeIndex={activeInd} />              
             </div>
           </>
         )}
@@ -114,7 +113,7 @@ function App() {
   )
 }
 
-const LineChart = (props:{data: GPSInfo[], activeIndex: number, handleClick: (which:string) => void}) => {
+const LineChart = (props:{data: GPSInfo[], activeIndex: number}) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
