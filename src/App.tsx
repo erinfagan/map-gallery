@@ -24,46 +24,39 @@ ChartJS.register(
   Legend
 );
 
-const _URLS:string[] = ["0.jpg", "1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpg", "10.jpg", "11.jpg", "12.jpg", "13.jpg", "14.jpg", "15.jpg"]; 
+const _GALLERY_LENGTH:number = 21;  
 
 type GPSInfo = { ind:number, label:string, image: string, location: google.maps.LatLngLiteral, alt: number, cd: number };
 
 function App() {
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [activeInd, setActiveInd] = useState(0);
-  const [activeImage, setActiveImage] = useState(_URLS[0]);
+  const [activeImage, setActiveImage] = useState("0.jpg");
   const [mapData, setmapData] = useState<GPSInfo[]>();
 
-  const [selectedMarker, setSelectedMarker] = useState<google.maps.marker.AdvancedMarkerElement|null>(null);
-  const [infoVisible, setInfoVisible] = useState(false);
-
-  const handleMarkerClick = useCallback((ind:number, marker?:google.maps.marker.AdvancedMarkerElement) => {
+  const handleMarkerClick = useCallback((ind:number) => {
     setActiveInd(ind);
-    if(marker) setSelectedMarker(marker);
-    if(ind !== activeInd){
-      setInfoVisible(true);
-    }else{
-      setInfoVisible(isVisible => !isVisible);
-    }
-    setActiveImage(_URLS[ind]);
-  },[activeInd]);
-
-  const handleInfoClose = useCallback(() => {
-    setInfoVisible(false)
-  },[]);
-
+    setActiveImage(imageUrls[ind]);
+  },[activeInd, imageUrls]);
+//45.750525023927686, 6.807305637981733, alt: 2514
   useEffect(() => {
     let coords:GPSInfo[] = [];
     async function processFiles() {
-      await Promise.all(_URLS.map(async (item, i) => {
-        let data = await parse(`/images/${item}`, {pick:['CreateDate', 'GPSLatitude', 'GPSLongitude', 'GPSAltitude'], reviveValues: true, translateKeys: true});
-        let pos:google.maps.LatLngLiteral = {lat:data.latitude,lng:data.longitude};
-        let picName = data.CreateDate instanceof Date ? data.CreateDate.toLocaleString('en-us', {weekday: 'short'}): item;
-        coords.push({ind: i, label: picName, image:item, location:pos, alt: data.GPSAltitude, cd: data.CreateDate});
-      }));
-      coords.sort((a,b) => a.ind-b.ind);
-      setmapData(coords);
-      if(mapData!==undefined){
-        console.log('done: '+mapData[0].location);
+      try {
+        let allImages:string[] = [];
+        for(let i:number=0; i<_GALLERY_LENGTH; i++){
+          let imageUrl:string = `${i}.jpg`;
+          allImages.push(imageUrl);
+          let data = await parse(`/images/${imageUrl}`, {pick:['CreateDate', 'GPSLatitude', 'GPSLongitude', 'GPSAltitude'], reviveValues: true, translateKeys: true});
+          let pos:google.maps.LatLngLiteral = {lat:data.latitude || 0,lng:data.longitude || 0};
+          let picName = data.CreateDate instanceof Date ? data.CreateDate.toLocaleString('en-us', {weekday: 'short'}): imageUrl;
+          coords.push({ind: i, label: picName, image:imageUrl, location:pos, alt: data.GPSAltitude, cd: data.CreateDate});
+        }
+        setImageUrls(allImages);
+        coords.sort((a,b) => a.ind-b.ind);
+        setmapData(coords);
+      } catch (error) {
+        console.error('image data failed: ', error);
       }
     }
     processFiles();
@@ -84,22 +77,17 @@ function App() {
                     defaultCenter={ mapData[0].location }                      
                     mapId='85777689c84f7376'
                     mapTypeId={'terrain'}>
-                      {mapData.map((item: GPSInfo, ind) => (
+                      {mapData.map((item: GPSInfo) => (
                         <MarkerWithRef 
-                          key={ind}  
+                          key={item.image}  
+                          activeMarker={activeInd}
+                          info={item}
                           position={item.location} 
                           title={item.image}  
-                          markerClick={(marker:google.maps.marker.AdvancedMarkerElement) => handleMarkerClick(item.ind,marker)}>
+                          markerClick={() => handleMarkerClick(item.ind)}>
                           <Pin background={'#d62111'} glyph={item.ind.toString()} glyphColor={'#FFF'} borderColor={'#7c170d'} />
                         </MarkerWithRef>
                       ))}
-                      {infoVisible && (
-                        <InfoWindow className={'infoWindow'} anchor={selectedMarker} onCloseClick={handleInfoClose} shouldFocus={false}>
-                          <b>Image {mapData[activeInd].ind}</b>
-                          <li>Day: {mapData[activeInd].label}</li>
-                          <li>Elevation: {mapData[activeInd].alt} meters</li>
-                        </InfoWindow>
-                      )}
                 </Map> 
               </APIProvider>   
             </div>
@@ -150,20 +138,32 @@ const LineChart = (props:{data: GPSInfo[], activeIndex: number}) => {
   )
 }
 
-const MarkerWithRef = (props: AdvancedMarkerProps & {markerClick: (marker:google.maps.marker.AdvancedMarkerElement) => void }) => {
-  const {children, markerClick, ...advancedMarkerProps} = props;
+const MarkerWithRef = (props: AdvancedMarkerProps & {activeMarker:number, info:GPSInfo, markerClick: () => void }) => {
+  const [closedSelf, setClosedSelf] = useState(false);
+  const {children, activeMarker, info, markerClick, ...advancedMarkerProps} = props;
   const [markerRef, marker] = useAdvancedMarkerRef();
 
+  const handleClick = useCallback(() => {
+    setClosedSelf(false);
+    markerClick();
+  },[]);
+
+  const imActive = activeMarker === info.ind && !closedSelf;
   return (
     <>
       <AdvancedMarker 
         ref={markerRef} 
-        onClick={()=>{
-          if(marker) markerClick(marker)
-        }}
+        onClick={()=>handleClick()}
         {...advancedMarkerProps}>
         {children}
       </AdvancedMarker>
+      {imActive && (
+          <InfoWindow className={'infoWindow'} anchor={marker} onCloseClick={()=>setClosedSelf(true)} shouldFocus={false}>
+            <b>Image {info.ind}</b>
+            <li>Day: {info.label}</li>
+            <li>Elevation: {info.alt} meters</li>
+          </InfoWindow>
+      )}
     </>
   )
 }
