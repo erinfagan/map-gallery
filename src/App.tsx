@@ -1,28 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import IconButton from '@mui/material/IconButton';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import { LineChart } from '@mui/x-charts/LineChart';
 import { parse } from 'exifr';
 import { AdvancedMarker, AdvancedMarkerProps, APIProvider, InfoWindow, Map, Pin, useAdvancedMarkerRef } from '@vis.gl/react-google-maps';
 import './App.css'
+import { LineItemIdentifier } from '@mui/x-charts';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 const _GALLERY_LENGTH:number = 21;  
 
@@ -38,7 +23,15 @@ function App() {
     setActiveInd(ind);
     setActiveImage(imageUrls[ind]);
   },[activeInd, imageUrls]);
-//45.750525023927686, 6.807305637981733, alt: 2514
+
+  const handleGalleryClick = useCallback((dir:number) => {
+    let nextIndex = activeInd + dir;
+    let maxInd = imageUrls.length - 1;
+    if(nextIndex === maxInd) nextIndex = 0;
+    if(nextIndex < 0) nextIndex = maxInd;
+    handleMarkerClick(nextIndex);
+  },[activeInd, imageUrls]);
+
   useEffect(() => {
     let coords:GPSInfo[] = [];
     async function processFiles() {
@@ -50,7 +43,7 @@ function App() {
           let data = await parse(`/images/${imageUrl}`, {pick:['CreateDate', 'GPSLatitude', 'GPSLongitude', 'GPSAltitude'], reviveValues: true, translateKeys: true});
           let pos:google.maps.LatLngLiteral = {lat:data.latitude || 0,lng:data.longitude || 0};
           let picName = data.CreateDate instanceof Date ? data.CreateDate.toLocaleString('en-us', {weekday: 'short'}): imageUrl;
-          coords.push({ind: i, label: picName, image:imageUrl, location:pos, alt: data.GPSAltitude, cd: data.CreateDate});
+          coords.push({ind: i, label: picName, image:imageUrl, location:pos, alt: data.GPSAltitude || null, cd: data.CreateDate});
         }
         setImageUrls(allImages);
         coords.sort((a,b) => a.ind-b.ind);
@@ -66,7 +59,17 @@ function App() {
     <>
       <div className="container">
         <div className="image">
-          <img id="photo" src={`/images/${activeImage}`} alt='image' />
+          <div className="slideBtns">
+            <IconButton aria-label="back" color="primary" onClick={()=>handleGalleryClick(-1)}>
+              <NavigateBeforeIcon fontSize='large' htmlColor='#ffff' />
+            </IconButton>
+            <IconButton aria-label="next" onClick={()=>handleGalleryClick(1)}>
+              <NavigateNextIcon fontSize='large' htmlColor='#ffff' />
+            </IconButton>
+          </div>
+          <div className="photo">
+            <img id="photo" src={`/images/${activeImage}`} alt='image' />
+          </div>
         </div>
         {mapData !== undefined && (
           <>
@@ -92,7 +95,7 @@ function App() {
               </APIProvider>   
             </div>
             <div className="chart center">           
-              <LineChart data={mapData} activeIndex={activeInd} />              
+              <ElevationChart data={mapData} tickClick={handleMarkerClick} activeIndex={activeInd} />              
             </div>
           </>
         )}
@@ -101,40 +104,25 @@ function App() {
   )
 }
 
-const LineChart = (props:{data: GPSInfo[], activeIndex: number}) => {
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    elements: {
-      point: {
-        radius:5
-      }
-    },
-    plugins: {
-      legend: {
-        position: 'top' as const
-      },
-      title: {
-        display: true,
-        text: 'Elevation Change Per Photo (meters)'
-      },
-    }
-  };
-  
-  const data = {
-    labels: props.data.map((item) => item.image),
-    datasets: [
-      {
-        label: 'Set 1',
-        data: props.data.map((item) => item.alt),
-        borderColor: 'rgb(18, 79, 201)',
-        backgroundColor: 'rgba(201, 18, 201, 1)'
-      }
-    ]
-  };
+const ElevationChart = (props:{data: GPSInfo[], tickClick: (ind:number)=> void, activeIndex: number}) => {
+ 
+  const handleTickClick = useCallback((data:LineItemIdentifier) => {
+    if(data.dataIndex) props.tickClick(data.dataIndex);
+  },[]);
 
   return (
-    <Line options={options} data={data} />
+    <LineChart
+      xAxis={[{ scaleType: 'point', data:props.data.map((item) => item.image)}]}
+      series={[
+        {
+          label: 'Altitude',
+          connectNulls: true,
+          data: props.data.map((item) => item.alt),
+          area: true,
+        },
+      ]}
+      onMarkClick={(event, d) => handleTickClick(d)}
+    />
   )
 }
 

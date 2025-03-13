@@ -23,8 +23,7 @@ UI/UX:
 
 These were selected because they were the most up-to-date and had good documentation.
 
-- [Chart.js](https://github.com/chartjs/Chart.js) for the line graph
-  - modular
+- [MUI Chart](https://mui.com) for the line graph
 - [Exifr](https://github.com/MikeKovarik/exifr) to parse JPEG EXIF data
   - modular
   - can specify parsing of minimal data (only need 4 properties extracted)
@@ -39,15 +38,14 @@ These were selected because they were the most up-to-date and had good documenta
 
 - I'm using an `<img>` tag for the gallery area AND having exifr library load the exif data from the same file
   - ideally, the .JPEG would be loaded once and that data would be rendered to the page and the exif pulled from there
-  - this should be possible with the exifr library and I should continue to tinker with it
-- The image file names are stored in a `const`
-  - just pulling all files from the `public/images/` folder would more flexible and allow gallery functionality
+  - this should be possible with the exifr library
 
 ### Usability
-- Add gallery navigation arrows to click through images and trigger the `<InfoWindow>` in the map
-- Support portrait image orientation
+- Support landscape image orientation
 - Make the `<InfoWindow>` prettier, that's an ugly gap at the top
-- Indicate the active image inside the chart and make the data points clickable to change the active image
+- Indicate the active image inside the chart
+- make the grid animation more responsive on mobile devices
+- tweak the `@media` queries so the grid doesn't jump around so much on desktop
 
 ## Overkill Improvement
 
