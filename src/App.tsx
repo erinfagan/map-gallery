@@ -27,7 +27,7 @@ function App() {
   const handleGalleryClick = useCallback((dir:number) => {
     let nextIndex = activeInd + dir;
     let maxInd = imageUrls.length - 1;
-    if(nextIndex === maxInd) nextIndex = 0;
+    if(nextIndex > maxInd) nextIndex = 0;
     if(nextIndex < 0) nextIndex = maxInd;
     handleMarkerClick(nextIndex);
   },[activeInd, imageUrls]);
@@ -121,7 +121,7 @@ const ElevationChart = (props:{data: GPSInfo[], tickClick: (ind:number)=> void, 
           area: true,
         },
       ]}
-      onMarkClick={(event, d) => handleTickClick(d)}
+      onMarkClick={(_event, d) => handleTickClick(d)}
     />
   )
 }

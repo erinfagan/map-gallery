@@ -73,7 +73,7 @@
 
 .chart {
   grid-area: chart;
-  
+  background-color: white;
 }
 
 .center > * {
